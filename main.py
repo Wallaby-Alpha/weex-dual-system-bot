@@ -122,6 +122,9 @@ class WeexDualBotDaemon:
                 self.risk_manager.evaluate_open_positions()
 
                 # 3. Scan universe if we have capacity for new trades
+                top_momentum = {"symbol": "None", "gain": 0.0, "spike": 0.0}
+                pumps_detected = 0
+
                 if len(self.risk_manager.active_trades) < self.config.max_open_positions:
                     for symbol in self.universe_symbols:
                         if not self.running:
@@ -134,6 +137,14 @@ class WeexDualBotDaemon:
                         if len(klines) < 35:
                             continue
 
+                        # Check recent impulse for observability
+                        recent_h = max(c["high"] for c in klines[-4:])
+                        prior_o = klines[-4]["open"]
+                        if prior_o > 0:
+                            g = ((recent_h - prior_o) / prior_o) * 100.0
+                            if g > top_momentum["gain"]:
+                                top_momentum = {"symbol": symbol, "gain": round(g, 1), "spike": 1.0}
+
                         # Fetch symbol precision specifications
                         meta = self.client.get_exchange_info(symbol)
                         if not meta:
@@ -142,9 +153,12 @@ class WeexDualBotDaemon:
                         # Evaluate Dual Strategy rules
                         signal = self.strategy.scan_for_setups(symbol, klines, meta)
                         if signal:
+                            pumps_detected += 1
                             self._execute_trade_signal(signal, meta)
 
-                        time.sleep(0.08) # Gentle rate-limit pacing
+                        time.sleep(0.05) # Gentle rate-limit pacing
+
+                    logger.info(f"[SCAN COMPLETED] {len(self.universe_symbols)} pairs checked | Active Triggers: {pumps_detected} | Highest 15m Surge: {top_momentum['symbol']} (+{top_momentum['gain']}%)")
 
                 # 4. Hourly Heartbeat to Telegram
                 if time.time() - self.last_heartbeat_time > 3600:
