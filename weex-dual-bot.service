@@ -1,0 +1,16 @@
+[Unit]
+Description=WEEX Dual-System Trading Bot Service
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/weex-dual-system-bot
+ExecStart=/root/weex-dual-system-bot/venv/bin/python main.py
+Restart=always
+RestartSec=5
+StandardOutput=append:/var/log/weex-bot.log
+StandardError=append:/var/log/weex-bot.err
+
+[Install]
+WantedBy=multi-user.target

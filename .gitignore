@@ -1,0 +1,23 @@
+# Environment variables & secrets
+.env
+*.env.local
+
+# Python caches
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environment
+venv/
+env/
+ENV/
+
+# Logs & temp data
+*.log
+*.err
+logs/
+data_cache/
+.DS_Store
+.idea/
+.vscode/
