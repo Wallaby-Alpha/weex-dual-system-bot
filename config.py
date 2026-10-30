@@ -1,6 +1,10 @@
 """
-Configuration Loader for WEEX Dual-System Trading Bot.
+Configuration Loader for WEEX Tri-System Trading Bot.
 Loads credentials, risk settings, and scanning parameters from environment variables.
+Supports:
+  - System 1: Pump FIB50 Reversal + Dynamic ATR
+  - System 2: Pump Confirmed Breakout + Tight Structure
+  - System 3: Crash Capitulation Reversal (Buying 5m Flash Dumps)
 """
 
 import os
@@ -45,22 +49,29 @@ class BotConfig:
         "WBTCUSDT", "BTCUSDT", "ETHUSDT"
     })
     
-    # --- Pump Detection Criteria ---
-    min_pump_gain_pct: float = float(os.getenv("MIN_PUMP_GAIN_PCT", "8.0")) # +8.0% minimum surge
-    min_volume_spike_ratio: float = float(os.getenv("MIN_VOL_SPIKE", "3.5")) # >= 3.5x 20-period median
-    min_quote_vol_usdt: float = float(os.getenv("MIN_QUOTE_VOL", "30000.0")) # >= $30,000 turnover
+    # --- Impulse Detection Criteria (Pumps & Crashes) ---
+    min_pump_gain_pct: float = float(os.getenv("MIN_PUMP_GAIN_PCT", "8.0"))   # +8.0% minimum surge
+    min_crash_drop_pct: float = float(os.getenv("MIN_CRASH_DROP_PCT", "8.0")) # -8.0% minimum dump
+    min_volume_spike_ratio: float = float(os.getenv("MIN_VOL_SPIKE", "3.5"))   # >= 3.5x 20-period median
+    min_quote_vol_usdt: float = float(os.getenv("MIN_QUOTE_VOL", "25000.0"))   # >= $25,000 turnover
     
-    # --- System 1: FIB50_REVERSAL + DYNAMIC_ATR Settings ---
+    # --- System 1: Pump FIB50_REVERSAL + DYNAMIC_ATR ---
     sys1_enabled: bool = os.getenv("SYS1_ENABLED", "True").lower() in ("true", "1", "yes")
     sys1_atr_multiplier: float = 1.5      # SL = Entry - 1.5x ATR-14
     sys1_reward_risk_ratio: float = 1.5   # TP = Entry + 1.5R
     sys1_max_hold_mins: int = 60          # 60 mins time stop
     
-    # --- System 2: CONFIRMED_BREAKOUT + TIGHT_STRUCTURE Settings ---
+    # --- System 2: Pump CONFIRMED_BREAKOUT + TIGHT_STRUCTURE ---
     sys2_enabled: bool = os.getenv("SYS2_ENABLED", "True").lower() in ("true", "1", "yes")
     sys2_tp1_ratio: float = 1.5           # TP1: 50% exit at 1.5R
     sys2_tp2_ratio: float = 2.5           # TP2: 50% exit at 2.5R
     sys2_max_hold_mins: int = 45          # 45 mins time stop
+    
+    # --- System 3: Crash CAPITULATION_BOUNCE (Buying the 5m Flash Dump) ---
+    sys3_enabled: bool = os.getenv("SYS3_ENABLED", "True").lower() in ("true", "1", "yes")
+    sys3_target_fib: float = float(os.getenv("SYS3_TARGET_FIB", "0.382")) # Fib 38.2% default exit
+    sys3_atr_multiplier: float = 1.5      # SL = Entry - 1.5x ATR-14 (or below trough)
+    sys3_max_hold_mins: int = 120         # 120 mins time stop
     
     # --- Logging ---
     log_level: str = os.getenv("LOG_LEVEL", "INFO")

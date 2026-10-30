@@ -1,6 +1,6 @@
 """
-Local Verification and Diagnostics Script for WEEX Dual-System Bot.
-Tests WEEX API connectivity, 1R=$1.00 USD position sizing math, and Telegram alert delivery.
+Local Verification and Diagnostics Script for WEEX Tri-System Bot.
+Tests WEEX API connectivity, 1R=$1.00 USD sizing math, Strategy Engine (Systems 1, 2, 3), and Telegram alerts.
 """
 
 import sys
@@ -18,7 +18,7 @@ if hasattr(sys.stdout, "reconfigure"):
 
 def run_tests():
     print("\n" + "=" * 65)
-    print("   RUNNING WEEX DUAL-BOT PRE-FLIGHT DIAGNOSTICS")
+    print("   RUNNING WEEX TRI-SYSTEM BOT PRE-FLIGHT DIAGNOSTICS")
     print("=" * 65)
 
     client = WeexClient(
@@ -70,8 +70,29 @@ def run_tests():
         print(f"  * {tc['symbol']}: Entry=${tc['entry']}, SL=${tc['sl']} (Risk: {r_pct:.2f}%)")
         print(f"    --> Sized Qty: {qty} contracts | Total Sized Risk: ${actual_loss:.2f} USD (Target: $1.00)")
 
-    # 3. Test Private API Credentials (if provided)
-    print("\n[TEST 3] Testing Private WEEX Account Credentials...")
+    # 3. Test System 3 (Capitulation Bounce Reversal) Trigger
+    print("\n[TEST 3] Testing System 3 (Capitulation Bounce) Strategy Trigger...")
+    synthetic_candles = []
+    # 35 baseline candles around 100
+    for i in range(35):
+        synthetic_candles.append({"open": 100.0, "high": 100.5, "low": 99.5, "close": 100.0, "quote_volume": 10000.0})
+    # 1 crash candle dropping from 100 to 90 (-10% drop, 5x volume spike = 50,000)
+    synthetic_candles.append({"open": 100.0, "high": 100.2, "low": 90.0, "close": 90.5, "quote_volume": 50000.0})
+    # 1 green reversal candle: open 90.5, low 90.2, high 93.0, close 92.5
+    synthetic_candles.append({"open": 90.5, "high": 93.0, "low": 90.2, "close": 92.5, "quote_volume": 15000.0})
+
+    dummy_meta = {"contractVal": 1.0, "minOrderSize": 0.01, "quantityPrecision": 2}
+    signal = strategy.scan_for_setups("TESTUSDT", synthetic_candles, dummy_meta)
+    if signal and "System 3" in signal["strategy"]:
+        print(f"  * Status: SUCCESS!")
+        print(f"    Strategy: {signal['strategy']}")
+        print(f"    Entry: ${signal['entry_price']:.2f} | SL: ${signal['stop_loss']:.2f} | TP (Fib 38.2%): ${signal['take_profit']:.2f}")
+        print(f"    Quantity: {signal['quantity']} | Risk: ${signal['dollar_risk']:.2f} USD")
+    else:
+        print(f"  * Status: FAILED (Signal={signal})")
+
+    # 4. Test Private API Credentials (if provided)
+    print("\n[TEST 4] Testing Private WEEX Account Credentials...")
     if config.api_key and config.api_secret and config.passphrase:
         try:
             balance = client.get_available_margin()
@@ -81,13 +102,14 @@ def run_tests():
     else:
         print("  * Status: SKIPPED (API keys not set in .env. Bot will run in DRY_RUN mode).")
 
-    # 4. Test Telegram Bot Notification (if provided)
-    print("\n[TEST 4] Testing Telegram Bot Notification Delivery...")
+    # 5. Test Telegram Bot Notification (if provided)
+    print("\n[TEST 5] Testing Telegram Bot Notification Delivery...")
     if telegram.enabled:
         test_msg = (
-            "🤖 <b>WEEX BOT PRE-FLIGHT TEST ALERT</b>\n"
+            "🤖 <b>WEEX TRI-SYSTEM BOT PRE-FLIGHT TEST ALERT</b>\n"
             "━━━━━━━━━━━━━━━━━━━━\n"
             "• <b>Status</b>: ✅ Operational\n"
+            "• <b>Active Systems</b>: 3 (Pump FIB50, Breakout, Capitulation Bounce)\n"
             "• <b>Risk Unit</b>: <code>1R = $1.00 USD</code>\n"
             "• <b>Message</b>: <i>Diagnostics check completed successfully!</i>"
         )

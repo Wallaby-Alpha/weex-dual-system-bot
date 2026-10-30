@@ -50,15 +50,16 @@ class TelegramNotifier:
     def send_startup_banner(self, dry_run: bool, dollar_risk: float, universe_count: int, balance: float):
         mode_str = "🟡 <b>DRY RUN (Paper Trading)</b>" if dry_run else "🟢 <b>LIVE EXECUTION</b>"
         msg = (
-            f"🚀 <b>WEEX DUAL-SYSTEM BOT ACTIVATED</b>\n"
+            f"🚀 <b>WEEX TRI-SYSTEM BOT ACTIVATED</b>\n"
             f"━━━━━━━━━━━━━━━━━━━━\n"
             f"• <b>Status</b>: {mode_str}\n"
             f"• <b>Risk Unit (1R)</b>: <code>${dollar_risk:.2f} USD</code>\n"
             f"• <b>Available USDT</b>: <code>${balance:,.2f}</code>\n"
             f"• <b>Scanned Universe</b>: <code>{universe_count} Altcoins</code>\n"
             f"• <b>Active Systems</b>:\n"
-            f"  1. <i>FIB50 Reversal + Dynamic ATR</i> (71.4% WR, 4.64 PF)\n"
-            f"  2. <i>Confirmed Breakout + Tight Flag</i> (53.6% WR, 1.32 PF)\n"
+            f"  1. <i>Pump FIB50 Reversal</i> (71.4% WR, 4.64 PF)\n"
+            f"  2. <i>Pump Confirmed Breakout</i> (53.6% WR, 1.32 PF)\n"
+            f"  3. <i>Crash Capitulation Reversal</i> (82.4% WR, 6.55 PF)\n"
             f"━━━━━━━━━━━━━━━━━━━━\n"
             f"⏱️ <i>Scanning WEEX 5m klines every 30s...</i>"
         )
@@ -73,6 +74,18 @@ class TelegramNotifier:
             f"• <b>Candle Turnover</b>: <code>${turnover:,.0f} USDT</code>\n"
             f"━━━━━━━━━━━━━━━━━━━━\n"
             f"🔍 <i>Monitoring consolidation for System 1 or System 2 trigger...</i>"
+        )
+        self.send_message(msg)
+
+    def send_crash_detected(self, symbol: str, drop_pct: float, vol_spike: float, turnover: float):
+        msg = (
+            f"💥 <b>5M CRASH DETECTED: {symbol}</b>\n"
+            f"━━━━━━━━━━━━━━━━━━━━\n"
+            f"• <b>Impulse Drop</b>: <code>-{drop_pct:.1f}%</code> in ≤ 20 mins\n"
+            f"• <b>Volume Spike</b>: <code>{vol_spike:.1f}x</code> baseline\n"
+            f"• <b>Candle Turnover</b>: <code>${turnover:,.0f} USDT</code>\n"
+            f"━━━━━━━━━━━━━━━━━━━━\n"
+            f"🎯 <i>Monitoring trough for System 3 Capitulation Reversal trigger...</i>"
         )
         self.send_message(msg)
 

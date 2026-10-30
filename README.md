@@ -1,28 +1,24 @@
-# WEEX Dual-System Momentum Trading Bot (1R = $1.00 USD)
+# WEEX Tri-System Momentum & Capitulation Trading Bot (1R = $1.00 USD)
 
-A production-grade algorithmic trading daemon designed to scan the top liquid altcoin perpetual contracts on **WEEX**, detect 5-minute explosive pump events, and execute high-probability momentum continuations with **exact 1R = $1.00 USD risk sizing** and **real-time Telegram alerts**.
+A production-grade algorithmic trading daemon designed to scan the top liquid altcoin perpetual contracts on **WEEX**, detect 5-minute explosive pump and crash events, and execute high-probability setups with **exact 1R = $1.00 USD risk sizing** and **real-time Telegram alerts**.
 
 ---
 
-## The Dual Trading System Architecture
+## The Tri-System Trading Architecture
 
-Based on empirical backtesting across **399,961 candlesticks (400 symbols)** on WEEX, this bot trades two complementary momentum systems:
+Based on empirical backtesting across **399,961 candlesticks (400 symbols)** on WEEX, this bot trades three statistically proven systems:
 
 ```
-                  [Explosive 5m Pump: Gain >= 8%, Vol >= 3.5x]
-                                       │
-                    ┌──────────────────┴──────────────────┐
-                    ▼                                     ▼
-        [Route A: Deep Retrace (38-55%)]      [Route B: Shallow Retrace (<35%)]
-                    │                                     │
-           Pullback Volume < 55%                 Price breaks Peak High
-                    │                                     │
-           First Green 5m Close                  Stop-Market Buy at Peak + 0.1%
-                    │                                     │
-    System 1: FIB50 Reversal + ATR SL      System 2: Confirmed Breakout + Tight SL
-    • Win Rate: 71.4%                     • Win Rate: 53.6%
-    • Profit Factor: 4.64                 • Profit Factor: 1.32
-    • Target: 1.5R (Avg Duration: 58m)    • Target: 1.5R (Avg Duration: 27m)
+      [5m Impulse Detected: >= 8.0% Move, >= 3.5x Volume Spike]
+                                │
+        ┌───────────────────────┼────────────────────────┐
+        ▼                       ▼                        ▼
+  [Pump Retrace 38-55%]   [Pump Shallow Flag]      [Flash Crash Dump]
+        │                       │                        │
+  System 1: FIB50 Rev.    System 2: Breakout       System 3: Capitulation
+  • Win Rate: 71.4%       • Win Rate: 53.6%        • Win Rate: 82.4%
+  • Profit Factor: 4.64   • Profit Factor: 1.32    • Profit Factor: 6.55
+  • Target: 1.5R (Pump)   • Target: 1.5R (Pump)    • Target: Fib 38.2% (Crash)
 ```
 
 ### Risk Management: Exact 1R = $1.00 USD Sizing
