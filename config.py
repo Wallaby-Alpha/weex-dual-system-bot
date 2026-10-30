@@ -31,6 +31,7 @@ class BotConfig:
     dollar_risk_per_trade: float = float(os.getenv("DOLLAR_RISK", "1.00")) # 1R = $1.00
     max_open_positions: int = int(os.getenv("MAX_OPEN_POSITIONS", "3"))    # Concurrency limit
     default_leverage: int = int(os.getenv("DEFAULT_LEVERAGE", "10"))       # 10x leverage
+    symbol_cooldown_mins: int = int(os.getenv("COOLDOWN_MINS", "30"))      # 30 mins cooldown before re-entering same coin
     
     # --- Telegram Notification Settings ---
     telegram_bot_token: str = os.getenv("TELEGRAM_BOT_TOKEN", "")
@@ -54,6 +55,8 @@ class BotConfig:
     min_crash_drop_pct: float = float(os.getenv("MIN_CRASH_DROP_PCT", "8.0")) # -8.0% minimum dump
     min_volume_spike_ratio: float = float(os.getenv("MIN_VOL_SPIKE", "3.5"))   # >= 3.5x 20-period median
     min_quote_vol_usdt: float = float(os.getenv("MIN_QUOTE_VOL", "25000.0"))   # >= $25,000 turnover
+    min_crash_quote_vol_usdt: float = float(os.getenv("MIN_CRASH_QUOTE_VOL", "50000.0")) # >= $50,000 candle turnover on crash
+    min_24h_vol_usdt: float = float(os.getenv("MIN_24H_VOL", "500000.0"))      # >= $500,000 24h volume to filter illiquid micro-caps
     
     # --- System 1: Pump FIB50_REVERSAL + DYNAMIC_ATR ---
     sys1_enabled: bool = os.getenv("SYS1_ENABLED", "True").lower() in ("true", "1", "yes")

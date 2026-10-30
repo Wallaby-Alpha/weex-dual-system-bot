@@ -261,7 +261,13 @@ class StrategyEngine:
                     drop_pct = ((base_h - trough_l) / base_h) * 100.0
                     vol_ratio = trough_v / median_vol
 
-                    if drop_pct >= self.config.min_crash_drop_pct and vol_ratio >= self.config.min_volume_spike_ratio and trough_v >= self.config.min_quote_vol_usdt:
+                    # Anti-Illiquid Guard:
+                    # 1. Crash candle must have at least $50,000 turnover
+                    # 2. Baseline volume must be >= $10,000 (filters illiquid ghost books like BLESS)
+                    if (drop_pct >= self.config.min_crash_drop_pct and 
+                        vol_ratio >= self.config.min_volume_spike_ratio and 
+                        trough_v >= self.config.min_crash_quote_vol_usdt and
+                        median_vol >= 10000.0):
                         # Must break 20-period prior low
                         prior_l = min(lows[max(0, base_idx - 20) : base_idx]) if base_idx > 0 else trough_l
                         if trough_l < prior_l:

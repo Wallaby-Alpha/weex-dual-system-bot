@@ -18,6 +18,7 @@ class RiskManager:
         self.config = config
         self.active_trades: Dict[str, Dict[str, Any]] = {}
         self.closed_trades: List[Dict[str, Any]] = []
+        self.closed_symbol_timestamps: Dict[str, float] = {} # Tracks exit time for cooldown
         self.total_realized_pnl: float = 0.0
 
     def can_open_new_trade(self, symbol: str) -> bool:
@@ -25,6 +26,15 @@ class RiskManager:
             return False
         if len(self.active_trades) >= self.config.max_open_positions:
             return False
+
+        # Cooldown check: prevent re-entering same symbol too quickly
+        last_exit = self.closed_symbol_timestamps.get(symbol, 0)
+        cooldown_sec = self.config.symbol_cooldown_mins * 60
+        if (time.time() - last_exit) < cooldown_sec:
+            rem_mins = int((cooldown_sec - (time.time() - last_exit)) / 60)
+            logger.debug(f"[*] {symbol} is in cooldown ({rem_mins}m remaining). Skipping.")
+            return False
+
         return True
 
     def register_trade(self, trade_info: Dict[str, Any]) -> bool:
@@ -115,6 +125,7 @@ class RiskManager:
         trade["r_multiple"] = round(r_multiple, 2)
 
         self.closed_trades.append(trade)
+        self.closed_symbol_timestamps[symbol] = time.time()
         del self.active_trades[symbol]
 
         # Send Telegram exit alert
