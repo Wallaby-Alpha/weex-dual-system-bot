@@ -100,6 +100,7 @@ class TelegramNotifier:
         r_risk = trade.get("dollar_risk", 1.00)
         risk_pct = trade.get("risk_pct", 0.0)
         target_r = trade.get("target_r", 1.5)
+        lev = trade.get("leverage", 10)
 
         msg = (
             f"🟢 <b>TRADE OPENED: {sym} ({side})</b>\n"
@@ -110,6 +111,7 @@ class TelegramNotifier:
             f"• <b>Stop Loss</b>: <code>{sl_p:.6g} (-{risk_pct:.2f}%)</code>\n"
             f"• <b>Take Profit</b>: <code>{tp_p:.6g} (+{risk_pct * target_r:.2f}%)</code>\n"
             f"• <b>Position Risk (1R)</b>: <code>${r_risk:.2f} USD</code>\n"
+            f"• <b>Leverage</b>: <code>{lev}x (Anti-Liquidation Buffer)</code>\n"
             f"• <b>Target R:R</b>: <code>{target_r}:1</code>\n"
             f"━━━━━━━━━━━━━━━━━━━━\n"
             f"🛡️ <i>Native exchange TP/SL plan orders submitted.</i>"

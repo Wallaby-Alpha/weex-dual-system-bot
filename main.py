@@ -194,8 +194,10 @@ class WeexDualBotDaemon:
         # In Live Trading Mode:
         if not self.config.dry_run:
             try:
-                # 1. Set leverage
-                self.client.set_leverage(symbol, self.config.default_leverage)
+                # 1. Set dynamically calculated safe leverage (Anti-Liquidation Protection)
+                lev = signal.get("leverage", self.config.default_leverage)
+                self.client.set_leverage(symbol, lev)
+                logger.info(f"[RISK GUARD] {symbol} leverage dynamically set to {lev}x (Liquidation buffered beyond SL)")
 
                 # 2. Submit market buy entry order
                 res = self.client.place_market_order(

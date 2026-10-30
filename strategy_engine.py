@@ -68,6 +68,26 @@ class StrategyEngine:
 
         return sized_qty, risk_dist, risk_pct
 
+    def calculate_safe_leverage(
+        self,
+        entry_price: float,
+        stop_loss_price: float,
+        safety_multiplier: float = 1.6
+    ) -> int:
+        """
+        Dynamically calculates safe leverage to GUARANTEE that the Stop Loss
+        is ALWAYS reached before the liquidation price.
+        Enforces: Liquidation Distance >= 1.6x Stop Loss Distance.
+        """
+        risk_pct = abs(entry_price - stop_loss_price) / entry_price
+        if risk_pct <= 0:
+            return 1
+
+        # On WEEX, liquidation distance approx: (0.90 / Leverage)
+        # We require (0.90 / Leverage) >= Risk_Pct * safety_multiplier
+        max_safe_lev = int(math.floor(0.90 / (risk_pct * safety_multiplier)))
+        return max(1, min(self.config.default_leverage, max_safe_lev))
+
     def scan_for_setups(
         self,
         symbol: str,
@@ -165,6 +185,7 @@ class StrategyEngine:
                             qty, r_dist, r_pct = self.calculate_1r_position_size(
                                 symbol_meta, curr_c, stop_loss, self.config.dollar_risk_per_trade
                             )
+                            safe_lev = self.calculate_safe_leverage(curr_c, stop_loss)
                             if qty > 0:
                                 return {
                                     "strategy": "System 1: FIB50 Reversal + Dynamic ATR",
@@ -176,6 +197,7 @@ class StrategyEngine:
                                     "quantity": qty,
                                     "dollar_risk": self.config.dollar_risk_per_trade,
                                     "risk_pct": r_pct,
+                                    "leverage": safe_lev,
                                     "target_r": self.config.sys1_reward_risk_ratio,
                                     "max_hold_mins": self.config.sys1_max_hold_mins,
                                     "impulse_meta": pump_candidate
@@ -198,6 +220,7 @@ class StrategyEngine:
                             qty, r_dist, r_pct = self.calculate_1r_position_size(
                                 symbol_meta, entry_p, stop_loss, self.config.dollar_risk_per_trade
                             )
+                            safe_lev = self.calculate_safe_leverage(entry_p, stop_loss)
                             if qty > 0:
                                 return {
                                     "strategy": "System 2: Confirmed Breakout + Tight Structure",
@@ -209,6 +232,7 @@ class StrategyEngine:
                                     "quantity": qty,
                                     "dollar_risk": self.config.dollar_risk_per_trade,
                                     "risk_pct": r_pct,
+                                    "leverage": safe_lev,
                                     "target_r": self.config.sys2_tp1_ratio,
                                     "max_hold_mins": self.config.sys2_max_hold_mins,
                                     "impulse_meta": pump_candidate
@@ -285,6 +309,7 @@ class StrategyEngine:
                                 symbol_meta, curr_c, stop_loss, self.config.dollar_risk_per_trade
                             )
 
+                            safe_lev = self.calculate_safe_leverage(curr_c, stop_loss)
                             if qty > 0:
                                 return {
                                     "strategy": "System 3: Capitulation Bounce Reversal",
@@ -296,6 +321,7 @@ class StrategyEngine:
                                     "quantity": qty,
                                     "dollar_risk": self.config.dollar_risk_per_trade,
                                     "risk_pct": r_pct,
+                                    "leverage": safe_lev,
                                     "target_r": target_r,
                                     "max_hold_mins": self.config.sys3_max_hold_mins,
                                     "impulse_meta": crash_candidate
