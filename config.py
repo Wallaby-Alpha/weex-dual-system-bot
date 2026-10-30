@@ -38,9 +38,9 @@ class BotConfig:
     telegram_enabled: bool = bool(os.getenv("TELEGRAM_BOT_TOKEN") and os.getenv("TELEGRAM_CHAT_ID"))
     
     # --- Market Scanner Universe ---
-    top_n_universe: int = int(os.getenv("TOP_N_UNIVERSE", "60"))           # Scan top 60 volume altcoins
+    top_n_universe: int = int(os.getenv("TOP_N_UNIVERSE", "400"))          # Scan top 400 volume altcoins
     quote_asset: str = "USDT"
-    scan_interval_sec: int = int(os.getenv("SCAN_INTERVAL_SEC", "30"))     # Loop every 30 seconds
+    scan_interval_sec: int = int(os.getenv("SCAN_INTERVAL_SEC", "45"))     # Loop every 45 seconds
     
     # Exclude majors and stablecoins (focus on altcoin runners)
     excluded_symbols: Set[str] = field(default_factory=lambda: {

@@ -156,7 +156,7 @@ class WeexDualBotDaemon:
                             pumps_detected += 1
                             self._execute_trade_signal(signal, meta)
 
-                        time.sleep(0.05) # Gentle rate-limit pacing
+                        time.sleep(0.02) # Gentle rate-limit pacing (scans 400 coins in ~18s)
 
                     logger.info(f"[SCAN COMPLETED] {len(self.universe_symbols)} pairs checked | Active Triggers: {pumps_detected} | Highest 15m Surge: {top_momentum['symbol']} (+{top_momentum['gain']}%)")
 
