@@ -210,9 +210,19 @@ class WeexDualBotDaemon:
                     logger.error(f"[!] Failed to execute live order for {symbol}: {res.get('error')}")
                     return
 
-                # 3. Submit native exchange TP/SL plan orders
-                self.client.place_native_tpsl_plan_order(symbol, "STOP_LOSS", sl_p, position_side="LONG")
-                self.client.place_native_tpsl_plan_order(symbol, "TAKE_PROFIT", tp_p, position_side="LONG")
+                # 3. Submit native exchange-level TP/SL plan orders
+                sl_ok = self.client.place_native_tpsl_plan_order(symbol, "STOP_LOSS", sl_p, position_side="LONG")
+                tp_ok = self.client.place_native_tpsl_plan_order(symbol, "TAKE_PROFIT", tp_p, position_side="LONG")
+                
+                if sl_ok:
+                    logger.info(f"[+] Exchange-level STOP_LOSS order active on WEEX @ {sl_p}")
+                else:
+                    logger.warning(f"[!] Warning: WEEX rejected native STOP_LOSS order for {symbol}. Bot software monitor will act as fallback.")
+
+                if tp_ok:
+                    logger.info(f"[+] Exchange-level TAKE_PROFIT order active on WEEX @ {tp_p}")
+                else:
+                    logger.warning(f"[!] Warning: WEEX rejected native TAKE_PROFIT order for {symbol}.")
 
             except Exception as e:
                 logger.error(f"[!] Live order submission failed for {symbol}: {e}")
