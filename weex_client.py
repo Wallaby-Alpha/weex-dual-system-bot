@@ -195,7 +195,9 @@ class WeexClient:
         side: str,             # 'BUY' or 'SELL'
         position_side: str,    # 'LONG' or 'SHORT'
         quantity: float,
-        client_order_id: Optional[str] = None
+        client_order_id: Optional[str] = None,
+        tp_trigger_price: Optional[float] = None,
+        sl_trigger_price: Optional[float] = None
     ) -> Dict[str, Any]:
         cid = client_order_id or f"b-d-{int(time.time()*1000)}"
         eff_pos_side = position_side if position_side in ("LONG", "SHORT") else ("LONG" if side.upper() == "BUY" else "SHORT")
@@ -208,7 +210,15 @@ class WeexClient:
             "quantity": str(quantity),
             "newClientOrderId": cid
         }
-        logger.info(f"Submitting WEEX Market Order: {side} {quantity} {symbol} (positionSide={eff_pos_side})")
+        # Attach atomic exchange TP/SL if provided
+        if tp_trigger_price and tp_trigger_price > 0:
+            payload["tpTriggerPrice"] = str(tp_trigger_price)
+            payload["tpWorkingType"] = "CONTRACT_PRICE"
+        if sl_trigger_price and sl_trigger_price > 0:
+            payload["slTriggerPrice"] = str(sl_trigger_price)
+            payload["slWorkingType"] = "CONTRACT_PRICE"
+
+        logger.info(f"Submitting WEEX Market Order: {side} {quantity} {symbol} (SL: {sl_trigger_price}, TP: {tp_trigger_price})")
         status, data = self.request("POST", "/capi/v3/order", body=payload)
         
         if status == 200 and isinstance(data, dict) and (data.get("success") or data.get("orderId")):
@@ -221,22 +231,25 @@ class WeexClient:
     def place_native_tpsl_plan_order(
         self,
         symbol: str,
-        plan_type: str,        # 'TAKE_PROFIT' or 'STOP_LOSS'
+        plan_type: str,        # 'STOP_LOSS' or 'TAKE_PROFIT'
         trigger_price: float,
+        quantity: float,
         position_side: str = "LONG"
     ) -> bool:
         cid = f"b-p-{plan_type[:2].lower()}-{int(time.time()*1000)}"
+        eff_plan = "loss_plan" if "loss" in plan_type.lower() else "profit_plan"
+        eff_pos_side = "long" if position_side.upper() == "LONG" else "short"
+
         payload = {
             "symbol": symbol,
-            "clientAlgoId": cid,
-            "planType": plan_type,
+            "clientOrderId": cid,
+            "planType": eff_plan,
             "triggerPrice": str(trigger_price),
-            "positionSide": position_side,
+            "positionSide": eff_pos_side,
             "executePrice": "0",  # Market execution upon trigger
-            "quantity": "0",      # 0 = whole-position protection on WEEX
-            "triggerPriceType": "CONTRACT_PRICE"
+            "size": str(quantity)
         }
-        logger.info(f"Submitting Native Plan Order on WEEX: {plan_type} @ {trigger_price} ({position_side})")
+        logger.info(f"Submitting Native Plan Order on WEEX: {eff_plan} @ {trigger_price} (size={quantity}, {eff_pos_side})")
         status, data = self.request("POST", "/capi/v3/placeTpSlOrder", body=payload)
         item = data[0] if isinstance(data, list) else data
         return status == 200 and isinstance(item, dict) and bool(item.get("success") or item.get("orderId"))

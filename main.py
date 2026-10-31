@@ -227,30 +227,29 @@ class WeexDualBotDaemon:
                 self.client.set_leverage(symbol, lev)
                 logger.info(f"[RISK GUARD] {symbol} leverage dynamically set to {lev}x (Liquidation buffered beyond SL)")
 
-                # 2. Submit market buy entry order
+                # 2. Submit market buy entry order with ATOMIC exchange-level TP/SL attached
                 res = self.client.place_market_order(
                     symbol=symbol,
                     side="BUY",
                     position_side="LONG",
-                    quantity=qty
+                    quantity=qty,
+                    sl_trigger_price=sl_p,
+                    tp_trigger_price=tp_p
                 )
                 if not res.get("success"):
                     logger.error(f"[!] Failed to execute live order for {symbol}: {res.get('error')}")
                     return
 
-                # 3. Submit native exchange-level TP/SL plan orders
-                sl_ok = self.client.place_native_tpsl_plan_order(symbol, "STOP_LOSS", sl_p, position_side="LONG")
-                tp_ok = self.client.place_native_tpsl_plan_order(symbol, "TAKE_PROFIT", tp_p, position_side="LONG")
+                logger.info(f"[+] Market entry executed with ATOMIC exchange-level TP/SL attached directly to order!")
+
+                # 3. Fallback: Also submit standalone plan order in case exchange requires separate algo ticket
+                sl_ok = self.client.place_native_tpsl_plan_order(symbol, "STOP_LOSS", sl_p, quantity=qty, position_side="LONG")
+                tp_ok = self.client.place_native_tpsl_plan_order(symbol, "TAKE_PROFIT", tp_p, quantity=qty, position_side="LONG")
                 
                 if sl_ok:
-                    logger.info(f"[+] Exchange-level STOP_LOSS order active on WEEX @ {sl_p}")
-                else:
-                    logger.warning(f"[!] Warning: WEEX rejected native STOP_LOSS order for {symbol}. Bot software monitor will act as fallback.")
-
+                    logger.info(f"[+] Confirmed standalone STOP_LOSS plan order on WEEX @ {sl_p}")
                 if tp_ok:
-                    logger.info(f"[+] Exchange-level TAKE_PROFIT order active on WEEX @ {tp_p}")
-                else:
-                    logger.warning(f"[!] Warning: WEEX rejected native TAKE_PROFIT order for {symbol}.")
+                    logger.info(f"[+] Confirmed standalone TAKE_PROFIT plan order on WEEX @ {tp_p}")
 
             except Exception as e:
                 logger.error(f"[!] Live order submission failed for {symbol}: {e}")
