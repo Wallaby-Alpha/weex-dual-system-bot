@@ -66,6 +66,17 @@ class StrategyEngine:
         if qty_prec == 0:
             sized_qty = max(min_size, math.floor(raw_qty))
 
+        # Hard Risk Floor Safety Guard:
+        # If the exchange's minOrderSize forces an actual risk larger than 1.25x our target risk (e.g. $1.70 vs $1.00),
+        # strictly REJECT the trade to protect capital!
+        actual_dollar_risk = sized_qty * risk_dist
+        if actual_dollar_risk > (dollar_risk * 1.25):
+            logger.warning(
+                f"[RISK REJECT] {symbol_meta.get('symbol')}: minOrderSize ({min_size}) forces risk of "
+                f"${actual_dollar_risk:.2f} USD, which exceeds maximum risk (${dollar_risk * 1.25:.2f}). Skipping!"
+            )
+            return 0.0, 0.0, 0.0
+
         return sized_qty, risk_dist, risk_pct
 
     def calculate_safe_leverage(

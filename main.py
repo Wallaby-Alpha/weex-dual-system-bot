@@ -67,7 +67,7 @@ class WeexDualBotDaemon:
             logger.error("[!] Failed to load WEEX altcoin universe. Halting.")
             return False
 
-        # 2. Check WEEX Account Balance
+        # 2. Check WEEX Account Balance & Reconcile Existing Open Positions
         balance = 1000.0 # Default for dry-run
         if not self.config.dry_run:
             try:
@@ -75,8 +75,36 @@ class WeexDualBotDaemon:
                 logger.info(f"[+] Connected to live WEEX account! Available Balance: ${balance:,.2f} USDT")
                 if balance < self.config.dollar_risk_per_trade:
                     logger.warning(f"[!] Balance (${balance:.2f}) is lower than 1R risk (${self.config.dollar_risk_per_trade:.2f})!")
+
+                # Live Position Reconciliation Guard:
+                # If the daemon was restarted while positions were open on WEEX,
+                # adopt them into risk_manager so the bot continues to monitor and close them!
+                open_positions = self.client.get_open_positions()
+                if open_positions:
+                    logger.info(f"[*] Found {len(open_positions)} existing open positions on WEEX account:")
+                    for pos in open_positions:
+                        p_sym = pos["symbol"]
+                        p_size = pos["size"]
+                        p_entry = pos["entry_price"]
+                        p_side = pos["side"]
+                        logger.info(f"    --> Adopting {p_sym}: {p_size} {p_side} @ {p_entry}")
+                        # Register with fallback 60m hold time and 5% SL buffer
+                        self.risk_manager.active_trades[p_sym] = {
+                            "strategy": "Reconciled Exchange Position",
+                            "symbol": p_sym,
+                            "side": p_side,
+                            "entry_price": p_entry,
+                            "stop_loss": p_entry * 0.94, # 6% fallback SL
+                            "take_profit": p_entry * 1.09,
+                            "quantity": p_size,
+                            "dollar_risk": self.config.dollar_risk_per_trade,
+                            "risk_pct": 6.0,
+                            "target_r": 1.5,
+                            "max_hold_mins": 60,
+                            "entry_timestamp": time.time()
+                        }
             except Exception as e:
-                logger.error(f"[!] WEEX account authentication failed: {e}")
+                logger.error(f"[!] WEEX account authentication/reconciliation failed: {e}")
                 return False
 
         # 3. Send Startup Banner to Telegram
