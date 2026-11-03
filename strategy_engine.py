@@ -39,14 +39,14 @@ class StrategyEngine:
         entry_price: float,
         stop_loss_price: float,
         dollar_risk: float = 1.00
-    ) -> Tuple[float, float, float]:
+    ) -> Tuple[float, float, float, float]:
         """
-        Calculates exact contract quantity to risk exactly $1.00 USD.
-        Returns: (sized_quantity, risk_distance, risk_percent)
+        Calculates exact contract quantity to risk approximately $1.00 USD.
+        Returns: (sized_quantity, risk_distance, risk_percent, actual_dollar_risk)
         """
         risk_dist = abs(entry_price - stop_loss_price)
         if risk_dist <= 0 or entry_price <= 0:
-            return 0.0, 0.0, 0.0
+            return 0.0, 0.0, 0.0, 0.0
 
         risk_pct = (risk_dist / entry_price) * 100.0
 
@@ -66,18 +66,27 @@ class StrategyEngine:
         if qty_prec == 0:
             sized_qty = max(min_size, math.floor(raw_qty))
 
-        # Hard Risk Floor Safety Guard:
-        # If the exchange's minOrderSize forces an actual risk larger than 1.25x our target risk (e.g. $1.70 vs $1.00),
-        # strictly REJECT the trade to protect capital!
-        actual_dollar_risk = sized_qty * risk_dist
+        # Hard Risk Floor & Ceiling Safety Guards:
+        actual_dollar_risk = sized_qty * risk_dist * contract_val
+
+        # 1. Ceiling check: Reject if minOrderSize forces risk > 1.25R ($1.25)
         if actual_dollar_risk > (dollar_risk * 1.25):
             logger.warning(
-                f"[RISK REJECT] {symbol_meta.get('symbol')}: minOrderSize ({min_size}) forces risk of "
+                f"[RISK CEILING REJECT] {symbol_meta.get('symbol')}: minOrderSize ({min_size}) forces risk of "
                 f"${actual_dollar_risk:.2f} USD, which exceeds maximum risk (${dollar_risk * 1.25:.2f}). Skipping!"
             )
-            return 0.0, 0.0, 0.0
+            return 0.0, 0.0, 0.0, 0.0
 
-        return sized_qty, risk_dist, risk_pct
+        # 2. Floor check: Reject if actual risk is negligible (< min_dollar_risk_floor, e.g. < $0.60 USD)
+        min_floor = getattr(self.config, "min_dollar_risk_floor", 0.60)
+        if actual_dollar_risk < min_floor:
+            logger.warning(
+                f"[RISK FLOOR REJECT] {symbol_meta.get('symbol')}: Sized risk of ${actual_dollar_risk:.2f} USD "
+                f"is below minimum risk floor (${min_floor:.2f} USD). Skipping micro-trade!"
+            )
+            return 0.0, 0.0, 0.0, 0.0
+
+        return sized_qty, risk_dist, risk_pct, actual_dollar_risk
 
     def calculate_safe_leverage(
         self,
@@ -193,7 +202,7 @@ class StrategyEngine:
 
                         if risk_dist > (curr_c * 0.003):
                             take_profit = curr_c + (self.config.sys1_reward_risk_ratio * risk_dist)
-                            qty, r_dist, r_pct = self.calculate_1r_position_size(
+                            qty, r_dist, r_pct, actual_risk = self.calculate_1r_position_size(
                                 symbol_meta, curr_c, stop_loss, self.config.dollar_risk_per_trade
                             )
                             safe_lev = self.calculate_safe_leverage(curr_c, stop_loss)
@@ -206,7 +215,7 @@ class StrategyEngine:
                                     "stop_loss": stop_loss,
                                     "take_profit": take_profit,
                                     "quantity": qty,
-                                    "dollar_risk": self.config.dollar_risk_per_trade,
+                                    "dollar_risk": actual_risk,
                                     "risk_pct": r_pct,
                                     "leverage": safe_lev,
                                     "target_r": self.config.sys1_reward_risk_ratio,
@@ -214,13 +223,14 @@ class StrategyEngine:
                                     "impulse_meta": pump_candidate
                                 }
 
-            # System 2: CONFIRMED_BREAKOUT + TIGHT_STRUCTURE (53.6% Win Rate, 1.32 PF)
+            # System 2: CONFIRMED_BREAKOUT + TIGHT_STRUCTURE (Requires strong volume >= 1.5x median)
             if self.config.sys2_enabled:
                 fib_618 = peak_p - 0.618 * imp_range
                 post_lows = lows[p_idx + 1 : curr_idx + 1]
                 cons_low = min(post_lows) if len(post_lows) > 0 else curr_l
 
-                if cons_low >= fib_618:
+                # Require consolidation to stay above 61.8% and breakout candle to have volume expansion
+                if cons_low >= fib_618 and curr_v >= (1.5 * median_vol):
                     if curr_h > peak_p and closes[curr_idx - 1] <= peak_p:
                         entry_p = max(curr_c, peak_p * 1.001)
                         stop_loss = min(cons_low * 0.998, entry_p * 0.975)
@@ -228,7 +238,7 @@ class StrategyEngine:
 
                         if risk_dist > (entry_p * 0.003):
                             take_profit = entry_p + (self.config.sys2_tp1_ratio * risk_dist)
-                            qty, r_dist, r_pct = self.calculate_1r_position_size(
+                            qty, r_dist, r_pct, actual_risk = self.calculate_1r_position_size(
                                 symbol_meta, entry_p, stop_loss, self.config.dollar_risk_per_trade
                             )
                             safe_lev = self.calculate_safe_leverage(entry_p, stop_loss)
@@ -241,7 +251,7 @@ class StrategyEngine:
                                     "stop_loss": stop_loss,
                                     "take_profit": take_profit,
                                     "quantity": qty,
-                                    "dollar_risk": self.config.dollar_risk_per_trade,
+                                    "dollar_risk": actual_risk,
                                     "risk_pct": r_pct,
                                     "leverage": safe_lev,
                                     "target_r": self.config.sys2_tp1_ratio,
@@ -322,7 +332,7 @@ class StrategyEngine:
                             take_profit = max(fib382_target, curr_c + (1.2 * risk_dist))
                             target_r = round((take_profit - curr_c) / risk_dist, 2)
 
-                            qty, r_dist, r_pct = self.calculate_1r_position_size(
+                            qty, r_dist, r_pct, actual_risk = self.calculate_1r_position_size(
                                 symbol_meta, curr_c, stop_loss, self.config.dollar_risk_per_trade
                             )
 
@@ -336,7 +346,7 @@ class StrategyEngine:
                                     "stop_loss": stop_loss,
                                     "take_profit": take_profit,
                                     "quantity": qty,
-                                    "dollar_risk": self.config.dollar_risk_per_trade,
+                                    "dollar_risk": actual_risk,
                                     "risk_pct": r_pct,
                                     "leverage": safe_lev,
                                     "target_r": target_r,

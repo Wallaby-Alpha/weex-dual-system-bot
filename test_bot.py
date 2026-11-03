@@ -59,7 +59,7 @@ def run_tests():
     ]
 
     for tc in test_cases:
-        qty, r_dist, r_pct = strategy.calculate_1r_position_size(
+        qty, r_dist, r_pct, actual_loss = strategy.calculate_1r_position_size(
             symbol_meta=tc["meta"],
             entry_price=tc["entry"],
             stop_loss_price=tc["sl"],

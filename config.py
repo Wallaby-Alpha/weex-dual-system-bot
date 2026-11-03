@@ -29,6 +29,7 @@ class BotConfig:
     
     # --- Risk Management: 1R = $1.00 USD ---
     dollar_risk_per_trade: float = float(os.getenv("DOLLAR_RISK", "1.00")) # 1R = $1.00
+    min_dollar_risk_floor: float = float(os.getenv("MIN_DOLLAR_RISK_FLOOR", "0.60")) # Minimum actual risk ($0.60) to prevent micro fraction trades
     max_open_positions: int = int(os.getenv("MAX_OPEN_POSITIONS", "3"))    # Concurrency limit
     default_leverage: int = int(os.getenv("DEFAULT_LEVERAGE", "10"))       # 10x leverage
     symbol_cooldown_mins: int = int(os.getenv("COOLDOWN_MINS", "30"))      # 30 mins cooldown before re-entering same coin
