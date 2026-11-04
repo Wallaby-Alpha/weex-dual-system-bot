@@ -52,9 +52,9 @@ class BotConfig:
     })
     
     # --- Impulse Detection Criteria (Pumps & Crashes) ---
-    min_pump_gain_pct: float = float(os.getenv("MIN_PUMP_GAIN_PCT", "8.0"))   # +8.0% minimum surge
-    min_crash_drop_pct: float = float(os.getenv("MIN_CRASH_DROP_PCT", "8.0")) # -8.0% minimum dump
-    min_volume_spike_ratio: float = float(os.getenv("MIN_VOL_SPIKE", "3.5"))   # >= 3.5x 20-period median
+    min_pump_gain_pct: float = float(os.getenv("MIN_PUMP_GAIN_PCT", "5.0"))   # +5.0% surge (adapted for sustained trend days)
+    min_crash_drop_pct: float = float(os.getenv("MIN_CRASH_DROP_PCT", "5.0")) # -5.0% dump
+    min_volume_spike_ratio: float = float(os.getenv("MIN_VOL_SPIKE", "2.2"))   # >= 2.2x 20-period median volume
     min_quote_vol_usdt: float = float(os.getenv("MIN_QUOTE_VOL", "25000.0"))   # >= $25,000 turnover
     min_crash_quote_vol_usdt: float = float(os.getenv("MIN_CRASH_QUOTE_VOL", "50000.0")) # >= $50,000 candle turnover on crash
     min_24h_vol_usdt: float = float(os.getenv("MIN_24H_VOL", "500000.0"))      # >= $500,000 24h volume to filter illiquid micro-caps
