@@ -10,7 +10,7 @@ import time
 import json
 import logging
 import requests
-from typing import Dict, Any, Optional, Tuple, List
+from typing import Dict, Any, Optional, Tuple, List, Set
 
 logger = logging.getLogger("weex_dual_bot.client")
 
@@ -93,6 +93,17 @@ class WeexClient:
         if status == 200 and isinstance(data, list):
             return data
         return []
+
+    def get_api_tradable_symbols(self) -> Set[str]:
+        """
+        Fetches the exact set of symbols authorized by WEEX for API trading.
+        Prevents code -1058: 'The trading pair is not supported via the API'.
+        """
+        status, data = self.request("GET", "/capi/v3/market/apiTradingSymbols", is_public=True)
+        if status == 200:
+            syms = data if isinstance(data, list) else (data.get("data", []) if isinstance(data, dict) else [])
+            return set(syms)
+        return set()
 
     def get_exchange_info(self, symbol: str) -> Optional[Dict[str, Any]]:
         if symbol in self._exchange_info_cache:

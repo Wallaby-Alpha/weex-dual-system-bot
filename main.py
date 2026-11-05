@@ -122,15 +122,21 @@ class WeexDualBotDaemon:
         if not tickers:
             return
 
+        # Fetch API-tradable whitelist from WEEX to avoid code -1058
+        api_tradable = self.client.get_api_tradable_symbols()
+        if api_tradable:
+            logger.info(f"[*] WEEX API reports {len(api_tradable)} pairs authorized for API contract trading.")
+
         alts = [
             t for t in tickers 
             if t.get("symbol", "").endswith(self.config.quote_asset) 
             and t["symbol"] not in self.config.excluded_symbols
+            and (not api_tradable or t["symbol"] in api_tradable)
         ]
         alts.sort(key=lambda x: float(x.get("quoteVolume", 0)), reverse=True)
         self.universe_symbols = [a["symbol"] for a in alts[:self.config.top_n_universe]]
         self.last_universe_refresh = time.time()
-        logger.info(f"[+] Loaded Top {len(self.universe_symbols)} volume altcoin contracts on WEEX.")
+        logger.info(f"[+] Loaded Top {len(self.universe_symbols)} verified API-tradable altcoins on WEEX.")
 
     def run(self):
         if not self.initialize():
