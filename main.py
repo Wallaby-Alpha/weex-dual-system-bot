@@ -187,6 +187,9 @@ class WeexDualBotDaemon:
                         time.sleep(0.02) # Gentle rate-limit pacing (scans 400 coins in ~18s)
 
                     logger.info(f"[SCAN COMPLETED] {len(self.universe_symbols)} pairs checked | Active Triggers: {pumps_detected} | Highest 15m Surge: {top_momentum['symbol']} (+{top_momentum['gain']}%)")
+                else:
+                    active_syms = list(self.risk_manager.active_trades.keys())
+                    logger.info(f"[CAPACITY FULL] {len(active_syms)}/{self.config.max_open_positions} positions active: {active_syms}. Skipping scan loop.")
 
                 # 4. Hourly Heartbeat to Telegram
                 if time.time() - self.last_heartbeat_time > 3600:
